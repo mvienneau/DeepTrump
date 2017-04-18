@@ -55,7 +55,7 @@ class tweet:
         self.y_train = np.asarray([[self.word_to_index[w] for w in sent[1:]] for sent in tokenized_data])
 
 
-class RNN:
+class RNNNumpy:
     def __init__(self, word_dim, hidden_dim=100, bptt_truncate=4):
         # Assign instance variables
         self.word_dim = word_dim #size of vocab
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     t.tokenize_and_build(t.tweets)
     t.create_train(t.token_tweets)
 
-    model = RNN(t.vocab_size)
+    model = RNNNumpy(t.vocab_size)
     #losses = model.train_with_sgd(t.X_train[:9000], t.y_train[:9000], nepoch=40, evaluate_loss_after=1)
     #joblib.dump(model, 'trained_model_2.pkl')
     m = joblib.load('trained_model.pkl')
