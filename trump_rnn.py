@@ -32,7 +32,7 @@ def softmax(vec):
 
 class tweet:
     def __init__(self):
-        raw_data = list(DictReader(open("Trump-Tweets/trump_tweets.csv", 'r')))
+        raw_data = list(DictReader(open("Trump-Tweets/trump_tweets_update.csv", 'r')))
         raw_data = [tweet['Text'].decode('utf-8').lower() for tweet in raw_data]
         self.tweets = ["%s %s %s" % (START, x, END) for x in raw_data]
         self.vocab_size = 4000
@@ -56,7 +56,7 @@ class tweet:
 
 
 class RNNNumpy:
-    def __init__(self, word_dim, hidden_dim=100, bptt_truncate=4):
+    def __init__(self, word_dim, hidden_dim=50, bptt_truncate=4):
         # Assign instance variables
         self.word_dim = word_dim #size of vocab
         self.hidden_dim = hidden_dim #hidden layer size
@@ -185,7 +185,7 @@ def generate_sentence(t, model):
         sampled_word = t.word_to_index[unknown_token]
         # We don't want to sample unknown words
         while sampled_word == t.word_to_index[unknown_token]:
-            samples = np.random.multinomial(5, next_word_probs[0][-1])
+            samples = np.random.multinomial(10, next_word_probs[0][-1])
             sampled_word = np.argmax(samples)
         new_sentence.append(sampled_word)
     sentence_str = [t.index_to_word[x] for x in new_sentence[1:-1]]
@@ -198,11 +198,14 @@ if __name__ == "__main__":
     t.create_train(t.token_tweets)
 
     model = RNNNumpy(t.vocab_size)
-    #losses = model.train_with_sgd(t.X_train[:9000], t.y_train[:9000], nepoch=40, evaluate_loss_after=1)
+    #losses = model.train_with_sgd(t.X_train[:150], t.y_train[:150], nepoch=40, evaluate_loss_after=1)
     #joblib.dump(model, 'trained_model_2.pkl')
-    m = joblib.load('trained_model.pkl')
+    m = joblib.load('trained_model_2.pkl')
 
     st = ""
     for s in generate_sentence(t, m):
-        st += s + " "
+        if (s in ['!', '#', ':', '@', '.', '\'']):
+            st += s
+        else:
+            st += s + " "
     print st
