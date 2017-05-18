@@ -11,8 +11,9 @@ unknown_token = "UNKNOWN_TOKEN"
 START = "SENT_START"
 END = "SENT_END"
 
+momentum = dict()
 
-def simpleSoftMax(x):
+def WTFsoftmax(x):
     """Compute softmax values for each sets of scores in x."""
     return np.exp(x) / np.sum(np.exp(x))
 
@@ -32,16 +33,21 @@ def softmax(vec):
 
 class tweet:
     def __init__(self):
-        raw_data = list(DictReader(open("Trump-Tweets/trump_tweets_update.csv", 'r')))
+        raw_data = list(DictReader(open("Trump-Tweets/trump_tweets_4-19.csv", 'r')))
         raw_data = [tweet['Text'].decode('utf-8').lower() for tweet in raw_data]
         self.tweets = ["%s %s %s" % (START, x, END) for x in raw_data]
         self.vocab_size = 4000
 
     def tokenize_and_build(self, data):
         self.token_tweets = [nltk.word_tokenize(sent) for sent in data]
-
         word_freq = nltk.FreqDist(itertools.chain(*self.token_tweets))
         self.vocab = word_freq.most_common(self.vocab_size-1)
+        xx = []
+        yy = []
+        for w in enumerate(word_freq):
+            xx.append(w[0])
+            yy.append(word_freq.freq(w[1]))
+            yy.append(word_freq[w[1]])
 
         self.index_to_word = [x[0] for x in self.vocab]
         self.index_to_word.append(unknown_token)
@@ -56,7 +62,7 @@ class tweet:
 
 
 class RNNNumpy:
-    def __init__(self, word_dim, hidden_dim=50, bptt_truncate=4):
+    def __init__(self, word_dim, hidden_dim=110, bptt_truncate=4):
         # Assign instance variables
         self.word_dim = word_dim #size of vocab
         self.hidden_dim = hidden_dim #hidden layer size
@@ -103,7 +109,7 @@ class RNNNumpy:
         # For each output backwards...
         for t in np.arange(T)[::-1]:
             dLdV += np.outer(delta_o[t], s[t].T)
-            # Initial delta calculation
+            # Delta_0 intiail guesss
             delta_t = self.V.T.dot(delta_o[t]) * (1 - (s[t] ** 2))
             # Backpropagation through time (for at most self.bptt_truncate steps)
             for bptt_step in np.arange(max(0, t-self.bptt_truncate), t+1)[::-1]:
@@ -115,30 +121,23 @@ class RNNNumpy:
         return [dLdU, dLdV, dLdW]
 
     def gradient_check(self, x, y, h=0.001, error_threshold=0.01):
-        # Calculate the gradients using backpropagation. We want to checker if these are correct.
         bptt_gradients = self.bptt(x, y)
-        # List of all parameters we want to check.
         model_parameters = ['U', 'V', 'W']
         # Gradient check for each parameter
         for pidx, pname in enumerate(model_parameters):
-            # Get the actual parameter value from the mode, e.g. model.W
             parameter = operator.attrgetter(pname)(self)
             print "Performing gradient check for parameter %s with size %d." % (pname, np.prod(parameter.shape))
-            # Iterate over each element of the parameter matrix, e.g. (0,0), (0,1), ...
             it = np.nditer(parameter, flags=['multi_index'], op_flags=['readwrite'])
             while not it.finished:
                 ix = it.multi_index
-                # Save the original value so we can reset it later
                 original_value = parameter[ix]
-                # Estimate the gradient using (f(x+h) - f(x-h))/(2*h)
+                # estmate: (f(x+h) - f(x-h))/(2*h)
                 parameter[ix] = original_value + h
                 gradplus = self.calculate_total_loss([x],[y])
                 parameter[ix] = original_value - h
                 gradminus = self.calculate_total_loss([x],[y])
                 estimated_gradient = (gradplus - gradminus)/(2*h)
-                # Reset parameter to original value
                 parameter[ix] = original_value
-                # The gradient for this parameter calculated using backpropagation
                 backprop_gradient = bptt_gradients[pidx][ix]
                 # calculate The relative error: (|x - y|/(|x| + |y|))
                 relative_error = np.abs(backprop_gradient - estimated_gradient)/(np.abs(backprop_gradient) + np.abs(estimated_gradient))
@@ -156,18 +155,19 @@ class RNNNumpy:
 
     def sgd_step(self, x, y, learning_rate):
         dLdU, dLdV, dLdW = self.bptt(x, y)
-        self.U -= learning_rate * dLdU
-        self.V -= learning_rate * dLdV
-        self.W -= learning_rate * dLdW
+        self.U -= (learning_rate * dLdU)
+        self.V -= (learning_rate * dLdV)
+        self.W -= (learning_rate * dLdW)
 
     def train_with_sgd(self, X_train, y_train, learning_rate=0.005, nepoch=100, evaluate_loss_after=5):
+        #TODO: Add momentum!
         losses = []
         ex_seen = 0
         for epoch in range(nepoch):
             if (epoch % evaluate_loss_after == 0):
                 loss = self.calculate_loss(X_train, y_train)
                 losses.append((ex_seen, loss))
-                print "Loss after num sexamples seen=%d epoch=%d: %f" % (ex_seen, epoch, loss)
+                print "Loss after num examples seen = %d epoch = %d: %f" % (ex_seen, epoch, loss)
                 if (len(losses) > 1 and losses[-1][1] > losses[-2][1]):
                     learning_rate = learning_rate * 0.5
                     print "Setting learning rate to: ", learning_rate
@@ -183,9 +183,8 @@ def generate_sentence(t, model):
         next_word_probs = model.forward_prop(new_sentence)
         #print next_word_probs[0][-1]
         sampled_word = t.word_to_index[unknown_token]
-        # We don't want to sample unknown words
         while sampled_word == t.word_to_index[unknown_token]:
-            samples = np.random.multinomial(10, next_word_probs[0][-1])
+            samples = np.random.multinomial(5, next_word_probs[0][-1])
             sampled_word = np.argmax(samples)
         new_sentence.append(sampled_word)
     sentence_str = [t.index_to_word[x] for x in new_sentence[1:-1]]
@@ -196,11 +195,11 @@ if __name__ == "__main__":
     t = tweet()
     t.tokenize_and_build(t.tweets)
     t.create_train(t.token_tweets)
-
+    print 'wtf'
     model = RNNNumpy(t.vocab_size)
-    #losses = model.train_with_sgd(t.X_train[:150], t.y_train[:150], nepoch=40, evaluate_loss_after=1)
-    #joblib.dump(model, 'trained_model_2.pkl')
-    m = joblib.load('trained_model_2.pkl')
+    #losses = model.train_with_sgd(t.X_train[:11000], t.y_train[:11000], nepoch=40, evaluate_loss_after=1)
+    #joblib.dump(model, 'trained_model_update.pkl')
+    m = joblib.load('trained_model_update.pkl')
 
     st = ""
     for s in generate_sentence(t, m):
