@@ -8,6 +8,8 @@ Currently very unoptimized and an overall mediocre langauge model. Working to im
 
 ## Pytorch Model
 *Under Development*
+
+
 Under the `pytorch/` folder you will find the pytorch model, `torch_rnn.py`. Currently, this is a first pass at writing the RNN in an actual deep learning library. 
 
 
