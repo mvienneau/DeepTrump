@@ -1,11 +1,6 @@
 import tweepy
 import csv
 
-consumer_key = '6vAmV50fns6vCcZPuwWcUDg2T'
-consumer_secret = '2h7pq4x5UCcnWr2VQB5Uou4bjEFRlASjIu2Tc4D2KGF4l7PiJz'
-BEAR = 'AAAAAAAAAAAAAAAAAAAAADsqJAEAAAAAURcyiP%2FsqLnUE6qeEoXxny6GdwA%3DmiiVSFPuqvAn91U2oM1yZTiINuGcibtzP81jzaDLADA0MzNK73'
-access_key = '2767237849-Wlml8F4YceQpPLeoC9fB6l29wZxbnsPgGSPetc5'
-access_secret = 'LW6UtNB1JUCnlTUQ6eG3NIu5vxDYp0hoxIHoqzIfostdc'
 
 #OUT_FILE = "C:/Users/mjvie/projects/rnn/trump_tweets.csv"
 
