@@ -155,6 +155,7 @@ if __name__ == "__main__":
     parser.add_argument('--max-epochs', type=int, default=10)
     parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--sequence-length', type=int, default=4)
+    parser.add_argument('--train', type=bool, default=False)
     args = parser.parse_args()
 
     # t = tweet()
@@ -166,9 +167,11 @@ if __name__ == "__main__":
     model = Model(dataset)
     model.cuda()
 
-    train(dataset, model, args)
-    torch.save(model.state_dict(), 'trained_model')
-    #model.load_state_dict(torch.load('trained_model'))
+    if args.train:
+        train(dataset, model, args)
+        torch.save(model.state_dict(), 'trained_model')
+    else:
+        model.load_state_dict(torch.load('trained_model'))
 
     #print(predict(dataset, model, text='Knock knock. Whos there?'))
     print(make_tweet(dataset, model, "<START>"))
